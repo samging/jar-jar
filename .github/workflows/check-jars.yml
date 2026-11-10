@@ -1,0 +1,36 @@
+# Every package jar here is checked the way amie checks a jar before it keeps a download: it reads as a jar, its
+# classes load on Java 21, its META-INF/amie/package.json parses and its "java" and "entry" hold, and a class has a
+# public no-arg constructor and a public run(String) that returns its answer (close() is called when it has one).
+# Classes are loaded without being initialized, so no code of a jar runs here; a pull request from a fork is safe.
+name: Check jars
+
+on:
+  pull_request:
+    paths: ["**.jar", ".github/**"]
+  push:
+    branches: [main]
+    paths: ["**.jar", ".github/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      # The Java amie runs
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      # amie puts its own Kotlin standard library under every package, so a Kotlin jar need not bundle one
+      - name: The Kotlin standard library amie provides
+        run: curl -fsSL -o "$RUNNER_TEMP/kotlin-stdlib.jar" https://repo1.maven.org/maven2/org/jetbrains/kotlin/kotlin-stdlib/2.1.0/kotlin-stdlib-2.1.0.jar
+
+      - name: Check every jar
+        run: git ls-files -z '*.jar' | xargs -0 java .github/scripts/CheckJars.java --provided "$RUNNER_TEMP/kotlin-stdlib.jar"

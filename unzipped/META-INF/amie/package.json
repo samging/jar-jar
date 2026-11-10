@@ -1,0 +1,24 @@
+{
+  "name": "browser",
+  "version": "1.0",
+  "description": "The browser: open <site> / search <words> open pages, page says what is in front, find gives what Wikipedia and the news say, news the headlines, tabs and close the open tabs, read gives a page's text.",
+  "java": 17,
+  "apps": ["Safari", "Google Chrome"],
+  "entry": "com.amie.browser.Browser",
+  "config": [
+    {
+      "file": "browser.properties",
+      "required": false,
+      "description": "browser= the app that opens pages",
+      "template": "# browser: the app that opens pages, Safari or Google Chrome; empty = your default browser\nbrowser=\n"
+    }
+  ],
+  "tests": [
+    { "name": "lists its commands", "input": "help", "contains": "search <words>" }
+  ],
+  "notes": "`page` makes macOS ask to let Amie control the browser (System Settings > Privacy & Security > Automation). `read` fetches the page itself, so it sees what a visitor who isn't signed in sees.",
+  "flags": [
+    { "text": "opens pages", "color": "amber" },
+    { "text": "no key", "color": "green" }
+  ]
+}
