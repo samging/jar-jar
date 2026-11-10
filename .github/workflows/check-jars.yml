@@ -1,7 +1,15 @@
-# Every package jar here is checked the way amie checks a jar before it keeps a download: it reads as a jar, its
-# classes load on Java 21, its META-INF/amie/package.json parses and its "java" and "entry" hold, and a class has a
-# public no-arg constructor and a public run(String) that returns its answer (close() is called when it has one).
-# Classes are loaded without being initialized, so no code of a jar runs here; a pull request from a fork is safe.
+# Two steps for every package jar here.
+#
+# 1. The AmiePackage contract, as the website's upload check holds a jar to it: a public class with a no-arg
+#    constructor, List<String> run(String) and close(), both required, inherited ones counting. Also what amie checks
+#    before it keeps a download: it reads as a jar, its classes load on Java 21, and its META-INF/amie/package.json
+#    parses with its "java" and "entry" holding. Classes are loaded without being initialized: no code of a jar runs.
+# 2. run() and close() called, as `amie packages test` calls them: the package class is made in a class loader of its
+#    own with its config folder, configure() is called, each test its metadata declares goes through run() and is
+#    checked, and close() is called. Every jar runs in a JVM of its own, with 30 s per call and 120 s per jar.
+#
+# Step 2 runs the jars' code, so the job has a read-only token, keeps no credentials from the checkout and gets no
+# secrets; pull requests from forks get none either.
 name: Check jars
 
 on:
@@ -21,6 +29,8 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       # The Java amie runs
       - uses: actions/setup-java@v4
@@ -32,5 +42,8 @@ jobs:
       - name: The Kotlin standard library amie provides
         run: curl -fsSL -o "$RUNNER_TEMP/kotlin-stdlib.jar" https://repo1.maven.org/maven2/org/jetbrains/kotlin/kotlin-stdlib/2.1.0/kotlin-stdlib-2.1.0.jar
 
-      - name: Check every jar
+      - name: Check every jar, running none of its code
         run: git ls-files -z '*.jar' | xargs -0 java .github/scripts/CheckJars.java --provided "$RUNNER_TEMP/kotlin-stdlib.jar"
+
+      - name: Call run() and close() of every jar
+        run: git ls-files -z '*.jar' | xargs -0 java .github/scripts/CheckJars.java --provided "$RUNNER_TEMP/kotlin-stdlib.jar" --run
